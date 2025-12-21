@@ -558,7 +558,13 @@ async function syncAnkiConnect() {
             for (const card of (infoResult.result || [])) {
                 const fields = card.fields || {};
                 const fieldData = fields[fieldName];
-                if (!fieldData) continue;
+                if (!fieldData) {
+                    // Debug: Log first card's available fields
+                    if (allRanks.length === 0 && Object.keys(fields).length > 0) {
+                        console.log('Available fields:', Object.keys(fields));
+                    }
+                    continue;
+                }
 
                 // Get the word (strip HTML if present)
                 let word = fieldData.value || '';
@@ -569,6 +575,12 @@ async function syncAnkiConnect() {
                     allRanks.push(freqMap[word]);
                 }
             }
+        }
+
+        // Debug output
+        console.log(`Sync complete: ${matureCount} cards, ${allRanks.length} matched, field="${fieldName}"`);
+        if (allRanks.length > 0) {
+            console.log(`Sample ranks: ${allRanks.slice(0, 5).join(', ')}`);
         }
 
         // Step 3: Calculate Mining Frontier (median rank)
