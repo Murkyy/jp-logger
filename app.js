@@ -227,6 +227,7 @@ function renderHeatmap() {
     // Aggregate log entries by date
     const dailyMinutes = {};
     for (const entry of state.log) {
+        if (!entry.date) continue; // Skip legacy entries
         const date = entry.date.split('T')[0]; // YYYY-MM-DD
         dailyMinutes[date] = (dailyMinutes[date] || 0) + entry.minutes;
     }
@@ -339,6 +340,7 @@ function claimMinutes(minutes) {
     state.totalMinutes += minutes;
     state.log.push({
         time: `${formatDate(now)} ${formatTime(now)}`,
+        date: now.toISOString(),
         minutes: minutes
     });
 
