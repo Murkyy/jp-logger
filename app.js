@@ -233,35 +233,40 @@ function renderHeatmap() {
     }
 
     // Generate last 84 days (12 weeks)
-    const today = new Date();
-    const cells = [];
+    try {
+        const today = new Date();
+        const cells = [];
 
-    for (let i = 83; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        const mins = dailyMinutes[dateStr] || 0;
+        for (let i = 83; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            const mins = dailyMinutes[dateStr] || 0;
 
-        // Calculate color level (0-5)
-        let level = 0;
-        if (mins > 0) level = 1;       // > 0 mins
-        if (mins >= 30) level = 2;     // >= 30 mins
-        if (mins >= 60) level = 3;     // >= 1 hour
-        if (mins >= 120) level = 4;    // >= 2 hours
-        if (mins >= 240) level = 5;    // >= 4 hours (golden)
+            // Calculate color level (0-5)
+            let level = 0;
+            if (mins > 0) level = 1;       // > 0 mins
+            if (mins >= 30) level = 2;     // >= 30 mins
+            if (mins >= 60) level = 3;     // >= 1 hour
+            if (mins >= 120) level = 4;    // >= 2 hours
+            if (mins >= 240) level = 5;    // >= 4 hours (golden)
 
-        cells.push({ date: dateStr, mins, level });
+            cells.push({ date: dateStr, mins, level });
+        }
+
+        // Render cells
+        container.innerHTML = cells.map(c => {
+            const hours = Math.floor(c.mins / 60);
+            const minutes = c.mins % 60;
+            const timeStr = c.mins === 0 ? 'No activity' :
+                (hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`);
+            return `<div class="heatmap-cell" data-level="${c.level}" 
+                title="${c.date}: ${timeStr}"></div>`;
+        }).join('');
+    } catch (e) {
+        console.error('Heatmap render error:', e);
+        // Fallback or ignore
     }
-
-    // Render cells
-    container.innerHTML = cells.map(c => {
-        const hours = Math.floor(c.mins / 60);
-        const minutes = c.mins % 60;
-        const timeStr = c.mins === 0 ? 'No activity' :
-            (hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`);
-        return `<div class="heatmap-cell" data-level="${c.level}" 
-            title="${c.date}: ${timeStr}"></div>`;
-    }).join('');
 }
 
 function renderLog() {
