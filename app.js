@@ -555,16 +555,23 @@ async function syncAnkiConnect() {
             if (infoResult.error) throw new Error(infoResult.error);
 
             // Extract words and look up ranks
+            const commonFields = ['Word', 'Expression', 'Vocabulary', 'Front', '単語', 'VocabKanji'];
+
             for (const card of (infoResult.result || [])) {
                 const fields = card.fields || {};
-                const fieldData = fields[fieldName];
+
+                // Try specified field first, then common ones
+                let fieldData = fields[fieldName];
                 if (!fieldData) {
-                    // Debug: Log first card's available fields
-                    if (allRanks.length === 0 && Object.keys(fields).length > 0) {
-                        console.log('Available fields:', Object.keys(fields));
+                    for (const cf of commonFields) {
+                        if (fields[cf]) {
+                            fieldData = fields[cf];
+                            break;
+                        }
                     }
-                    continue;
                 }
+
+                if (!fieldData) continue;
 
                 // Get the word (strip HTML if present)
                 let word = fieldData.value || '';
@@ -578,10 +585,7 @@ async function syncAnkiConnect() {
         }
 
         // Debug output
-        console.log(`Sync complete: ${matureCount} cards, ${allRanks.length} matched, field="${fieldName}"`);
-        if (allRanks.length > 0) {
-            console.log(`Sample ranks: ${allRanks.slice(0, 5).join(', ')}`);
-        }
+        console.log(`Sync complete: ${matureCount} cards, ${allRanks.length} matched`);
 
         // Step 3: Calculate Mining Frontier (median rank)
         const frontier = calculateMedian(allRanks);
