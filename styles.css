@@ -1278,6 +1278,11 @@ body {
   background: #39d353;
 }
 
+.heatmap-cell[data-level="5"] {
+  background: #ffd700;
+  box-shadow: 0 0 6px rgba(255, 215, 0, 0.6);
+}
+
 /* Legend */
 .heatmap-legend {
   display: flex;
