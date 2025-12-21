@@ -52,6 +52,7 @@ const elements = {
     preset1: document.getElementById('preset1'),
     preset2: document.getElementById('preset2'),
     preset3: document.getElementById('preset3'),
+    preset4: document.getElementById('preset4'),
     ankiDeck: document.getElementById('ankiDeck'),
     syncAnkiBtn: document.getElementById('syncAnkiBtn'),
     // Cloud sync
@@ -378,21 +379,6 @@ if (elements.mangaInput) {
     });
 }
 
-// Quick input buttons (presets) - supports QWERTY and AZERTY
-document.addEventListener('keydown', (e) => {
-    // Number shortcuts when input not focused
-    if (document.activeElement !== elements.minutesInput) {
-        // QWERTY: 1, 2, 3 | AZERTY: &, é, "
-        if (e.key === '1' || e.key === '&') elements.minutesInput.value = '24';
-        if (e.key === '2' || e.key === 'é') elements.minutesInput.value = '45';
-        if (e.key === '3' || e.key === '"') elements.minutesInput.value = '60';
-        if (['1', '2', '3', '&', 'é', '"'].includes(e.key)) {
-            elements.minutesInput.focus();
-            elements.minutesInput.select();
-        }
-    }
-});
-
 // Preset buttons click handlers
 document.querySelectorAll('.preset-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -412,10 +398,11 @@ elements.settingsBtn.addEventListener('click', () => {
     elements.manualTotal.value = '';
 
     // Load presets
-    const presets = state.settings.presets || [24, 45, 60];
+    const presets = state.settings.presets || [24, 24, 45, 60];
     if (elements.preset1) elements.preset1.value = presets[0];
     if (elements.preset2) elements.preset2.value = presets[1];
     if (elements.preset3) elements.preset3.value = presets[2];
+    if (elements.preset4) elements.preset4.value = presets[3];
 
     // Load Anki deck
     if (elements.ankiDeck) elements.ankiDeck.value = state.settings.ankiDeck || '';
@@ -435,11 +422,12 @@ function closeSettings() {
     state.settings.ankiWords = parseInt(elements.ankiWords.value, 10) || 0;
 
     // Save presets
-    if (elements.preset1 && elements.preset2 && elements.preset3) {
+    if (elements.preset1 && elements.preset2 && elements.preset3 && elements.preset4) {
         state.settings.presets = [
             parseInt(elements.preset1.value, 10) || 24,
-            parseInt(elements.preset2.value, 10) || 45,
-            parseInt(elements.preset3.value, 10) || 60
+            parseInt(elements.preset2.value, 10) || 24,
+            parseInt(elements.preset3.value, 10) || 45,
+            parseInt(elements.preset4.value, 10) || 60
         ];
         updatePresetButtons();
     }
@@ -454,9 +442,18 @@ function closeSettings() {
     elements.settingsModal.classList.remove('active');
 }
 
-// Preset buttons are hardcoded in HTML, no dynamic update needed
+// Update preset button values based on settings
 function updatePresetButtons() {
-    // Presets are now fixed: anime (24m), manga (24m), podcast (45m), hour (60m)
+    const presets = state.settings.presets || [24, 24, 45, 60];
+    const labels = ['anime', 'manga', 'podcast', '1 hour'];
+    const buttons = document.querySelectorAll('.preset-btn');
+
+    buttons.forEach((btn, i) => {
+        if (presets[i] !== undefined) {
+            btn.dataset.mins = presets[i];
+            btn.innerHTML = `${presets[i]}m<span class="preset-hint">${labels[i]}</span>`;
+        }
+    });
 }
 
 elements.saveManualTotal.addEventListener('click', () => {

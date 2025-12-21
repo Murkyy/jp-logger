@@ -172,12 +172,25 @@ body {
 
 /* ===== PRESETS EDITOR ===== */
 .presets-editor {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-xs);
 }
 
+.preset-edit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.preset-edit span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  min-width: 50px;
+}
+
 .preset-input {
-  flex: 1;
+  width: 60px;
   padding: var(--space-xs);
   background: var(--bg-card);
   border: 1px solid rgba(255, 255, 255, 0.1);
