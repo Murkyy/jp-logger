@@ -394,7 +394,7 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
 elements.settingsBtn.addEventListener('click', () => {
     elements.weeklyGoal.value = state.settings.weeklyGoalHours;
     elements.totalGoal.value = state.settings.totalGoalHours;
-    elements.ankiWords.value = state.settings.ankiWords;
+    elements.ankiWords.textContent = state.settings.ankiWords;
     elements.manualTotal.value = '';
 
     // Load presets
@@ -419,7 +419,7 @@ function closeSettings() {
     // Save settings
     state.settings.weeklyGoalHours = parseInt(elements.weeklyGoal.value, 10) || 21;
     state.settings.totalGoalHours = parseInt(elements.totalGoal.value, 10) || 3000;
-    state.settings.ankiWords = parseInt(elements.ankiWords.value, 10) || 0;
+    // state.settings.ankiWords = parseInt(elements.ankiWords.value, 10) || 0; // Read-only now
 
     // Save presets
     if (elements.preset1 && elements.preset2 && elements.preset3 && elements.preset4) {
@@ -445,7 +445,7 @@ function closeSettings() {
 // Update preset button values based on settings
 function updatePresetButtons() {
     const presets = state.settings.presets || [24, 24, 45, 60];
-    const labels = ['anime', 'manga', 'podcast', '1 hour'];
+    const labels = ['📺', '📖', '🎧', '⏱️'];
     const buttons = document.querySelectorAll('.preset-btn');
 
     buttons.forEach((btn, i) => {
@@ -502,7 +502,7 @@ async function syncAnkiConnect() {
 
         const matureCount = result.result?.length || 0;
         state.settings.ankiWords = matureCount;
-        elements.ankiWords.value = matureCount;
+        elements.ankiWords.textContent = matureCount;
 
         saveState();
         updateUI();
