@@ -558,16 +558,56 @@ function initFirebase() {
     return firebaseDb;
 }
 
-// Auto-sync (silent push in background)
+// ===== FIREBASE AUTH =====
+let firebaseAuth = null;
+let currentUser = null;
+
+function initAuth() {
+    if (!firebaseAuth && typeof firebase !== 'undefined') {
+        initFirebase();
+        firebaseAuth = firebase.auth();
+
+        // Auth state listener
+        firebaseAuth.onAuthStateChanged((user) => {
+            currentUser = user;
+            updateAuthUI();
+
+            if (user) {
+                // Start real-time sync with auth uid
+                setupRealtimeSync(user.uid);
+            }
+        });
+    }
+    return firebaseAuth;
+}
+
+function updateAuthUI() {
+    const loggedOut = document.getElementById('authLoggedOut');
+    const loggedIn = document.getElementById('authLoggedIn');
+    const userEmail = document.getElementById('authUserEmail');
+    const status = document.getElementById('authStatus');
+
+    if (currentUser) {
+        if (loggedOut) loggedOut.style.display = 'none';
+        if (loggedIn) loggedIn.style.display = 'block';
+        if (userEmail) userEmail.textContent = currentUser.email;
+        if (status) status.textContent = '✓ Syncing automatically';
+    } else {
+        if (loggedOut) loggedOut.style.display = 'block';
+        if (loggedIn) loggedIn.style.display = 'none';
+        if (status) status.textContent = 'Login to sync across devices';
+    }
+}
+
+// Auto-sync (uses auth uid)
 async function autoSync() {
-    const userId = state.settings.cloudUserId;
-    if (!userId) return; // Not configured
+    if (!currentUser) return; // Not logged in
 
     try {
         const db = initFirebase();
         if (!db) return;
 
-        await db.ref(`users/${userId}`).set(state);
+        await db.ref(`users/${currentUser.uid}`).set(state);
         console.log('Auto-synced to cloud');
     } catch (error) {
         console.error('Auto-sync failed:', error);
@@ -604,12 +644,9 @@ function setupRealtimeSync(userId) {
     });
 }
 
-// Initialize auto sync on load if user ID exists
+// Initialize auth on load
 function initAutoSync() {
-    const userId = state.settings.cloudUserId;
-    if (userId) {
-        setupRealtimeSync(userId);
-    }
+    initAuth();
 }
 
 async function cloudPush() {
@@ -749,6 +786,64 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').catch(() => { });
     });
 }
+
+// ===== AUTH HANDLERS =====
+document.getElementById('loginBtn')?.addEventListener('click', async () => {
+    const email = document.getElementById('authEmail')?.value;
+    const password = document.getElementById('authPassword')?.value;
+    const status = document.getElementById('authStatus');
+
+    if (!email || !password) {
+        if (status) status.textContent = 'Please enter email and password';
+        return;
+    }
+
+    try {
+        const auth = initAuth();
+        if (status) status.textContent = 'Logging in...';
+        await auth.signInWithEmailAndPassword(email, password);
+        if (status) status.textContent = '✓ Logged in!';
+    } catch (error) {
+        console.error('Login error:', error);
+        if (status) status.textContent = `Error: ${error.message}`;
+    }
+});
+
+document.getElementById('signupBtn')?.addEventListener('click', async () => {
+    const email = document.getElementById('authEmail')?.value;
+    const password = document.getElementById('authPassword')?.value;
+    const status = document.getElementById('authStatus');
+
+    if (!email || !password) {
+        if (status) status.textContent = 'Please enter email and password';
+        return;
+    }
+
+    if (password.length < 6) {
+        if (status) status.textContent = 'Password must be at least 6 characters';
+        return;
+    }
+
+    try {
+        const auth = initAuth();
+        if (status) status.textContent = 'Creating account...';
+        await auth.createUserWithEmailAndPassword(email, password);
+        if (status) status.textContent = '✓ Account created!';
+        autoSync();
+    } catch (error) {
+        console.error('Signup error:', error);
+        if (status) status.textContent = `Error: ${error.message}`;
+    }
+});
+
+document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    try {
+        const auth = initAuth();
+        await auth.signOut();
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+});
 
 // ===== INIT =====
 loadState();

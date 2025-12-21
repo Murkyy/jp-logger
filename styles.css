@@ -286,6 +286,22 @@ body {
   background: var(--accent-orange);
 }
 
+/* ===== AUTH BUTTONS ===== */
+.auth-buttons {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+}
+
+.auth-user {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.auth-user strong {
+  color: var(--accent-cyan);
+}
+
 /* ===== RING SECTION ===== */
 .ring-section {
   display: flex;

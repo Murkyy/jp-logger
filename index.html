@@ -147,13 +147,23 @@
         </div>
         <hr>
         <div class="setting-group">
-          <label>Cloud Sync (Firebase)</label>
-          <div class="cloud-sync-row">
-            <input type="text" id="cloudUserId" placeholder="Your unique user ID" class="cloud-input">
-            <button class="cloud-sync-btn" id="cloudPushBtn">Push ↑</button>
-            <button class="cloud-sync-btn" id="cloudPullBtn">Pull ↓</button>
+          <label>Account (Cloud Sync)</label>
+          <div id="authSection">
+            <div id="authLoggedOut">
+              <input type="email" id="authEmail" placeholder="Email" class="cloud-input">
+              <input type="password" id="authPassword" placeholder="Password" class="cloud-input"
+                style="margin-top:8px">
+              <div class="auth-buttons">
+                <button class="cloud-sync-btn" id="loginBtn">Login</button>
+                <button class="cloud-sync-btn" id="signupBtn">Sign Up</button>
+              </div>
+            </div>
+            <div id="authLoggedIn" style="display:none">
+              <div class="auth-user">Logged in as: <strong id="authUserEmail">-</strong></div>
+              <button class="cloud-sync-btn" id="logoutBtn" style="margin-top:8px">Logout</button>
+            </div>
           </div>
-          <small class="anki-hint">Enter a unique ID to sync data across devices</small>
+          <small class="anki-hint" id="authStatus">Login to sync across devices</small>
         </div>
       </div>
       <div class="modal-footer">
@@ -171,6 +181,7 @@
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
   <script src="app.js"></script>
 </body>
