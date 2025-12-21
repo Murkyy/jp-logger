@@ -445,7 +445,7 @@ function closeSettings() {
 // Update preset button values based on settings
 function updatePresetButtons() {
     const presets = state.settings.presets || [24, 24, 45, 60];
-    const labels = ['📺', '📖', '🎧', '⏱️'];
+    const labels = ['anime', 'manga', 'podcast', '1h'];
     const buttons = document.querySelectorAll('.preset-btn');
 
     buttons.forEach((btn, i) => {
