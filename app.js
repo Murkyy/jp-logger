@@ -2,13 +2,16 @@
 
 // ===== STATE & CONSTANTS =====
 const RING_CIRCUMFERENCE = 534.07; // 2 * PI * 85
+let freqMap = null; // Loaded from freq_map.json
 
 const defaultSettings = {
     weeklyGoalHours: 21,
     totalGoalHours: 3000,
     ankiWords: 0,
+    frontier: 0, // Mining frontier (median frequency rank)
     presets: [24, 24, 45, 60],
-    ankiDeck: ''
+    ankiDeck: '',
+    ankiField: 'Expression' // Field containing the word
 };
 
 let state = {
@@ -54,6 +57,7 @@ const elements = {
     preset3: document.getElementById('preset3'),
     preset4: document.getElementById('preset4'),
     ankiDeck: document.getElementById('ankiDeck'),
+    ankiField: document.getElementById('ankiField'),
     syncAnkiBtn: document.getElementById('syncAnkiBtn'),
     // Cloud sync
     cloudUserId: document.getElementById('cloudUserId'),
@@ -133,15 +137,20 @@ function getRank(totalHours) {
     return { rank: 'F', title: 'Beginner', color: '#6b7280' };
 }
 
-function getPowerLevel(words) {
-    return Math.floor(words / 100);
+function getPowerLevel() {
+    const frontier = state.settings.frontier || 0;
+    if (frontier === 0) return 0;
+    return frontier; // Return the actual frontier value
 }
 
-// ===== UI UPDATES =====
 function updateUI() {
-    // Power Level
-    const level = getPowerLevel(state.settings.ankiWords);
-    elements.powerLevel.textContent = `Lvl ${level}`;
+    // Power Level (Mining Frontier)
+    const frontier = getPowerLevel();
+    if (frontier > 0) {
+        elements.powerLevel.textContent = `Lv ${frontier.toLocaleString()}`;
+    } else {
+        elements.powerLevel.textContent = `Lv 0`;
+    }
 
     // Streak
     if (elements.streakCount) {
@@ -404,8 +413,9 @@ elements.settingsBtn.addEventListener('click', () => {
     if (elements.preset3) elements.preset3.value = presets[2];
     if (elements.preset4) elements.preset4.value = presets[3];
 
-    // Load Anki deck
+    // Load Anki deck and field
     if (elements.ankiDeck) elements.ankiDeck.value = state.settings.ankiDeck || '';
+    if (elements.ankiField) elements.ankiField.value = state.settings.ankiField || 'Expression';
 
     elements.settingsModal.classList.add('active');
 });
@@ -432,9 +442,12 @@ function closeSettings() {
         updatePresetButtons();
     }
 
-    // Save Anki deck
+    // Save Anki deck and field
     if (elements.ankiDeck) {
         state.settings.ankiDeck = elements.ankiDeck.value || '';
+    }
+    if (elements.ankiField) {
+        state.settings.ankiField = elements.ankiField.value || 'Expression';
     }
 
     saveState();
@@ -468,8 +481,29 @@ elements.saveManualTotal.addEventListener('click', () => {
 });
 
 // ===== ANKI CONNECT =====
+// Load frequency map on startup
+async function loadFreqMap() {
+    try {
+        const response = await fetch('./freq_map.json');
+        freqMap = await response.json();
+        console.log(`Loaded frequency map with ${Object.keys(freqMap).length} words`);
+    } catch (e) {
+        console.warn('Could not load freq_map.json:', e);
+        freqMap = {};
+    }
+}
+
+// Calculate median of an array
+function calculateMedian(arr) {
+    if (arr.length === 0) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0 ? sorted[mid] : Math.floor((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
 async function syncAnkiConnect() {
     const deckName = elements.ankiDeck?.value || state.settings.ankiDeck || '';
+    const fieldName = state.settings.ankiField || 'Expression';
 
     if (!deckName) {
         alert('Please enter a deck name first');
@@ -478,46 +512,84 @@ async function syncAnkiConnect() {
 
     const btn = elements.syncAnkiBtn;
     btn.classList.add('loading');
-    btn.textContent = 'Syncing...';
+    btn.textContent = '🔄';
 
     try {
-        // AnkiConnect request to get mature cards
-        const response = await fetch('http://127.0.0.1:8765', {
+        // Step 1: Find mature card IDs
+        const findResponse = await fetch('http://127.0.0.1:8765', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'findCards',
                 version: 6,
-                params: {
-                    query: `deck:"${deckName}" prop:ivl>=21`
-                }
+                params: { query: `deck:"${deckName}" prop:ivl>=21` }
             })
         });
+        const findResult = await findResponse.json();
+        if (findResult.error) throw new Error(findResult.error);
 
-        const result = await response.json();
+        const cardIds = findResult.result || [];
+        const matureCount = cardIds.length;
 
-        if (result.error) {
-            throw new Error(result.error);
-        }
-
-        const matureCount = result.result?.length || 0;
+        // Update card count display
         state.settings.ankiWords = matureCount;
         elements.ankiWords.textContent = matureCount;
+
+        // Step 2: Get card info (fields) - batch in chunks to avoid timeout
+        let allRanks = [];
+        const chunkSize = 500;
+
+        for (let i = 0; i < cardIds.length; i += chunkSize) {
+            const chunk = cardIds.slice(i, i + chunkSize);
+
+            const infoResponse = await fetch('http://127.0.0.1:8765', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'cardsInfo',
+                    version: 6,
+                    params: { cards: chunk }
+                })
+            });
+            const infoResult = await infoResponse.json();
+            if (infoResult.error) throw new Error(infoResult.error);
+
+            // Extract words and look up ranks
+            for (const card of (infoResult.result || [])) {
+                const fields = card.fields || {};
+                const fieldData = fields[fieldName];
+                if (!fieldData) continue;
+
+                // Get the word (strip HTML if present)
+                let word = fieldData.value || '';
+                word = word.replace(/<[^>]*>/g, '').trim();
+
+                // Look up in frequency map
+                if (freqMap && freqMap[word]) {
+                    allRanks.push(freqMap[word]);
+                }
+            }
+        }
+
+        // Step 3: Calculate Mining Frontier (median rank)
+        const frontier = calculateMedian(allRanks);
+        state.settings.frontier = frontier;
 
         saveState();
         updateUI();
 
-        btn.textContent = `✓ ${matureCount} cards`;
+        // Success feedback
+        btn.textContent = `✓ Lv ${frontier.toLocaleString()}`;
         setTimeout(() => {
-            btn.textContent = 'Sync';
+            btn.textContent = '🔄';
             btn.classList.remove('loading');
         }, 2000);
 
     } catch (error) {
         console.error('AnkiConnect error:', error);
-        btn.textContent = 'Error';
+        btn.textContent = '❌';
         setTimeout(() => {
-            btn.textContent = 'Sync';
+            btn.textContent = '🔄';
             btn.classList.remove('loading');
         }, 2000);
 
@@ -844,6 +916,7 @@ document.getElementById('logoutBtn')?.addEventListener('click', async () => {
 
 // ===== INIT =====
 loadState();
+loadFreqMap(); // Load frequency map for mining frontier
 updatePresetButtons();
 updateUI();
 initAutoSync(); // Start real-time sync if user ID exists

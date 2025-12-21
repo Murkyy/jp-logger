@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ronin-logger-v16';
+const CACHE_NAME = 'ronin-logger-v17';
 const ASSETS = [
     './',
     './index.html',
@@ -6,7 +6,8 @@ const ASSETS = [
     './app.js',
     './manifest.json',
     './favicon.ico',
-    './assets/claim.mp3'
+    './assets/claim.mp3',
+    './freq_map.json'
 ];
 
 // Install - cache assets
