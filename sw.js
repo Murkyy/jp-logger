@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ronin-logger-v20';
+const CACHE_NAME = 'ronin-logger-v21';
 const ASSETS = [
     './',
     './index.html',

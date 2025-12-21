@@ -212,8 +212,54 @@ function updateUI() {
     elements.rankDisplay.textContent = `Rank ${rank} • ${title}`;
     elements.rankDisplay.style.color = color;
 
+    // Heatmap
+    renderHeatmap();
+
     // Log
     renderLog();
+}
+
+// ===== HEATMAP =====
+function renderHeatmap() {
+    const container = document.getElementById('heatmapContainer');
+    if (!container) return;
+
+    // Aggregate log entries by date
+    const dailyMinutes = {};
+    for (const entry of state.log) {
+        const date = entry.date.split('T')[0]; // YYYY-MM-DD
+        dailyMinutes[date] = (dailyMinutes[date] || 0) + entry.minutes;
+    }
+
+    // Generate last 84 days (12 weeks)
+    const today = new Date();
+    const cells = [];
+
+    for (let i = 83; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const mins = dailyMinutes[dateStr] || 0;
+
+        // Calculate color level (0-4)
+        let level = 0;
+        if (mins > 0) level = 1;       // > 0 mins
+        if (mins >= 30) level = 2;     // >= 30 mins
+        if (mins >= 60) level = 3;     // >= 1 hour
+        if (mins >= 120) level = 4;    // >= 2 hours
+
+        cells.push({ date: dateStr, mins, level });
+    }
+
+    // Render cells
+    container.innerHTML = cells.map(c => {
+        const hours = Math.floor(c.mins / 60);
+        const minutes = c.mins % 60;
+        const timeStr = c.mins === 0 ? 'No activity' :
+            (hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`);
+        return `<div class="heatmap-cell" data-level="${c.level}" 
+            title="${c.date}: ${timeStr}"></div>`;
+    }).join('');
 }
 
 function renderLog() {
