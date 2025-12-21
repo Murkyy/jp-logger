@@ -241,12 +241,13 @@ function renderHeatmap() {
         const dateStr = d.toISOString().split('T')[0];
         const mins = dailyMinutes[dateStr] || 0;
 
-        // Calculate color level (0-4)
+        // Calculate color level (0-5)
         let level = 0;
         if (mins > 0) level = 1;       // > 0 mins
         if (mins >= 30) level = 2;     // >= 30 mins
         if (mins >= 60) level = 3;     // >= 1 hour
         if (mins >= 120) level = 4;    // >= 2 hours
+        if (mins >= 240) level = 5;    // >= 4 hours (golden)
 
         cells.push({ date: dateStr, mins, level });
     }
