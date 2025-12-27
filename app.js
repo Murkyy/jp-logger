@@ -391,6 +391,13 @@ function flashClaimButton() {
 // ===== EVENT HANDLERS =====
 elements.claimBtn.addEventListener('click', () => {
     const value = parseInt(elements.minutesInput.value, 10);
+    if (!value || value <= 0) {
+        // Visual feedback: shake the input to indicate it needs a value
+        elements.minutesInput.classList.add('shake');
+        setTimeout(() => elements.minutesInput.classList.remove('shake'), 400);
+        elements.minutesInput.focus();
+        return;
+    }
     if (claimMinutes(value)) {
         elements.minutesInput.value = '';
         elements.minutesInput.focus();
@@ -471,6 +478,8 @@ elements.settingsBtn.addEventListener('click', () => {
     if (elements.ankiDeck) elements.ankiDeck.value = state.settings.ankiDeck || '';
     if (elements.ankiField) elements.ankiField.value = state.settings.ankiField || 'Expression';
 
+    // Lock body scroll
+    document.body.classList.add('modal-open');
     elements.settingsModal.classList.add('active');
 });
 
@@ -506,6 +515,9 @@ function closeSettings() {
 
     saveState();
     updateUI();
+
+    // Unlock body scroll
+    document.body.classList.remove('modal-open');
     elements.settingsModal.classList.remove('active');
 }
 
@@ -556,7 +568,16 @@ function calculateMedian(arr) {
 }
 
 async function syncAnkiConnect() {
-    const deckName = elements.ankiDeck?.value || state.settings.ankiDeck || '';
+    // Save current input values before syncing
+    if (elements.ankiDeck) {
+        state.settings.ankiDeck = elements.ankiDeck.value || '';
+    }
+    if (elements.ankiField) {
+        state.settings.ankiField = elements.ankiField.value || 'Expression';
+    }
+    saveState();
+
+    const deckName = state.settings.ankiDeck || '';
     const fieldName = state.settings.ankiField || 'Expression';
 
     if (!deckName) {
@@ -674,6 +695,51 @@ async function syncAnkiConnect() {
 if (elements.syncAnkiBtn) {
     elements.syncAnkiBtn.addEventListener('click', syncAnkiConnect);
 }
+
+// ===== SETTINGS AUTO-SAVE ON BLUR =====
+// Save settings immediately when inputs lose focus for better UX
+
+function saveSettingsOnBlur() {
+    // Save Anki settings
+    if (elements.ankiDeck) {
+        state.settings.ankiDeck = elements.ankiDeck.value || '';
+    }
+    if (elements.ankiField) {
+        state.settings.ankiField = elements.ankiField.value || 'Expression';
+    }
+
+    // Save goals
+    if (elements.weeklyGoal) {
+        state.settings.weeklyGoalHours = parseInt(elements.weeklyGoal.value, 10) || 21;
+    }
+    if (elements.totalGoal) {
+        state.settings.totalGoalHours = parseInt(elements.totalGoal.value, 10) || 3000;
+    }
+
+    // Save presets
+    if (elements.preset1 && elements.preset2 && elements.preset3 && elements.preset4) {
+        state.settings.presets = [
+            parseInt(elements.preset1.value, 10) || 24,
+            parseInt(elements.preset2.value, 10) || 24,
+            parseInt(elements.preset3.value, 10) || 45,
+            parseInt(elements.preset4.value, 10) || 60
+        ];
+        updatePresetButtons();
+    }
+
+    saveState();
+}
+
+// Attach blur listeners to all settings inputs
+[elements.ankiDeck, elements.ankiField,
+elements.weeklyGoal, elements.totalGoal,
+elements.preset1, elements.preset2, elements.preset3, elements.preset4
+].forEach(input => {
+    if (input) {
+        input.addEventListener('blur', saveSettingsOnBlur);
+    }
+});
+
 // ===== FIREBASE CLOUD SYNC =====
 const firebaseConfig = {
     apiKey: "AIzaSyBwJx33EHAVBtpfIfebZ_mOMlFs_2xiFx4",
@@ -871,12 +937,7 @@ if (elements.cloudPullBtn) {
     elements.cloudPullBtn.addEventListener('click', cloudPull);
 }
 
-// Load cloud user ID on settings open
-elements.settingsBtn.addEventListener('click', () => {
-    if (elements.cloudUserId && state.settings.cloudUserId) {
-        elements.cloudUserId.value = state.settings.cloudUserId;
-    }
-});
+// Note: cloudUserId is loaded in the main settingsBtn handler above
 
 // Export/Import
 elements.exportBtn.addEventListener('click', () => {
@@ -940,6 +1001,8 @@ document.getElementById('loginBtn')?.addEventListener('click', async () => {
     try {
         const auth = initAuth();
         if (status) status.textContent = 'Logging in...';
+        // Set persistence to LOCAL so login persists across browser restarts
+        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
         await auth.signInWithEmailAndPassword(email, password);
         if (status) status.textContent = '✓ Logged in!';
     } catch (error) {
@@ -966,6 +1029,8 @@ document.getElementById('signupBtn')?.addEventListener('click', async () => {
     try {
         const auth = initAuth();
         if (status) status.textContent = 'Creating account...';
+        // Set persistence to LOCAL so login persists across browser restarts
+        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
         await auth.createUserWithEmailAndPassword(email, password);
         if (status) status.textContent = '✓ Account created!';
         autoSync();

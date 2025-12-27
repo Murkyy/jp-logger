@@ -71,6 +71,14 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Body scroll lock when modal is open */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+}
+
 /* ===== APP CONTAINER ===== */
 .app {
   display: flex;
@@ -522,6 +530,7 @@ body {
 .preset-btn {
   flex: 1;
   max-width: 100px;
+  min-height: 48px;
   padding: var(--space-sm) var(--space-xs);
   background: var(--bg-card);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -536,6 +545,8 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .preset-btn:hover {
@@ -582,6 +593,7 @@ body {
   outline: none;
   width: 100%;
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .minutes-input::-webkit-outer-spin-button,
@@ -594,6 +606,35 @@ body {
   color: var(--text-muted);
 }
 
+/* Shake animation for empty input feedback */
+.minutes-input.shake {
+  animation: shake 0.4s ease-out;
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-8px);
+  }
+
+  40% {
+    transform: translateX(8px);
+  }
+
+  60% {
+    transform: translateX(-6px);
+  }
+
+  80% {
+    transform: translateX(6px);
+  }
+}
+
 .input-suffix {
   font-size: 1.2rem;
   color: var(--text-muted);
@@ -603,6 +644,7 @@ body {
 .claim-btn {
   position: relative;
   width: 100%;
+  min-height: 56px;
   padding: var(--space-md) var(--space-lg);
   border: none;
   border-radius: 16px;
@@ -619,6 +661,8 @@ body {
   overflow: hidden;
   transition: var(--transition-normal);
   box-shadow: var(--shadow-glow-blue);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .claim-btn:hover {
@@ -704,6 +748,7 @@ body {
   text-align: center;
   outline: none;
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .manga-input::-webkit-outer-spin-button,
@@ -857,12 +902,16 @@ body {
 .modal {
   width: 100%;
   max-width: 400px;
+  max-height: 90vh;
+  max-height: 90dvh;
   background: var(--bg-secondary);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   overflow: hidden;
   transform: scale(0.9);
   transition: var(--transition-normal);
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-overlay.active .modal {
@@ -904,6 +953,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .setting-group {
