@@ -1413,3 +1413,120 @@ body.modal-open {
   font-weight: 600;
   color: var(--accent-green);
 }
+
+/* ===== BOSS THEMES ===== */
+body.theme-void .ring-progress {
+  filter: hue-rotate(90deg) drop-shadow(0 0 15px rgba(139, 92, 246, 0.6));
+}
+
+body.theme-void .week-status {
+  color: var(--accent-purple);
+}
+
+body.theme-glitch .ring-progress {
+  filter: hue-rotate(0deg) drop-shadow(0 0 15px rgba(6, 182, 212, 0.6));
+}
+
+body.theme-glitch .week-status {
+  color: var(--accent-cyan);
+}
+
+body.theme-inferno .ring-progress {
+  filter: hue-rotate(-60deg) drop-shadow(0 0 15px rgba(245, 158, 11, 0.6));
+}
+
+body.theme-inferno .week-status {
+  color: var(--accent-orange);
+}
+
+body.theme-abyss .ring-progress {
+  filter: hue-rotate(40deg) drop-shadow(0 0 15px rgba(59, 130, 246, 0.6));
+}
+
+body.theme-abyss .week-status {
+  color: var(--accent-blue);
+}
+
+/* ===== CRITICAL FEEDBACK ===== */
+.critical-flash {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.4) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 9999;
+  animation: flash-out 0.5s ease-out forwards;
+}
+
+@keyframes flash-out {
+  0% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.critical-damage {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  text-shadow: 0 0 20px rgba(251, 191, 36, 0.8), 0 0 40px rgba(251, 191, 36, 0.5);
+  pointer-events: none;
+  z-index: 10000;
+  animation: damage-popup 1.5s ease-out forwards;
+}
+
+@keyframes damage-popup {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+
+  40% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.8);
+  }
+}
+
+.claim-btn.critical {
+  background: linear-gradient(135deg, var(--accent-gold), var(--accent-orange)) !important;
+  box-shadow: 0 0 60px rgba(251, 191, 36, 0.6) !important;
+  animation: critical-pulse 0.8s ease-out;
+}
+
+@keyframes critical-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  25% {
+    transform: scale(1.08);
+  }
+
+  50% {
+    transform: scale(1.04);
+  }
+
+  75% {
+    transform: scale(1.06);
+  }
+}

@@ -4,6 +4,22 @@
 const RING_CIRCUMFERENCE = 534.07; // 2 * PI * 85
 let freqMap = null; // Loaded from freq_map.json
 
+// ===== BOSS THEMES (Rotating Weekly) =====
+const BOSS_THEMES = [
+    { name: 'THE VOID', class: 'theme-void', hue: 270 },      // Purple
+    { name: 'THE GLITCH', class: 'theme-glitch', hue: 180 },  // Cyan
+    { name: 'THE INFERNO', class: 'theme-inferno', hue: 15 }, // Orange/Red
+    { name: 'THE ABYSS', class: 'theme-abyss', hue: 220 }     // Deep Blue
+];
+
+function getCurrentBoss() {
+    const weekNum = getWeekNumber(new Date());
+    return BOSS_THEMES[weekNum % BOSS_THEMES.length];
+}
+
+// Critical claim chance (15%)
+const CRITICAL_CHANCE = 0.15;
+
 const defaultSettings = {
     weeklyGoalHours: 21,
     totalGoalHours: 3000,
@@ -256,11 +272,21 @@ function updateUI() {
     nextMonday.setHours(0, 0, 0, 0);
     const hoursLeft = Math.ceil((nextMonday - now) / (1000 * 60 * 60));
 
+    // Boss system
+    const boss = getCurrentBoss();
+    const bossHP = Math.max(0, Math.round((weekGoal - weekHours) * 60)); // HP = remaining minutes
+
+    // Apply boss theme to document
+    BOSS_THEMES.forEach(t => document.body.classList.remove(t.class));
+    document.body.classList.add(boss.class);
+
     let statusText;
-    if (hoursLeft <= 24) {
-        statusText = `Week ${weekNum} • ${hoursLeft}h left`;
+    if (isComplete) {
+        statusText = `⚔️ ${boss.name} DEFEATED!`;
+    } else if (hoursLeft <= 24) {
+        statusText = `⚔️ ${boss.name} • ${bossHP} HP • ${hoursLeft}h left`;
     } else {
-        statusText = `Week ${weekNum} • ${daysUntilMonday} day${daysUntilMonday > 1 ? 's' : ''} left`;
+        statusText = `⚔️ ${boss.name} • ${bossHP} HP • ${daysUntilMonday}d left`;
     }
     elements.weekStatus.textContent = statusText;
 
@@ -446,12 +472,52 @@ function claimMinutes(minutes) {
     // Auto-sync to cloud if configured
     autoSync();
 
+    // Critical claim check (15% chance on claims >= 20 minutes)
+    const isCritical = minutes >= 20 && Math.random() < CRITICAL_CHANCE;
+
+    // Calculate display damage (visual only - actual minutes already saved accurately)
+    const baseDamage = minutes;
+    const bonusMultiplier = isCritical ? (1.5 + Math.random()) : 1; // 1.5x to 2.5x on crit
+    const displayDamage = Math.round(baseDamage * bonusMultiplier);
+
     // Feedback
-    playClaimSound();
-    triggerHaptic();
-    flashClaimButton();
+    if (isCritical) {
+        playCriticalFeedback(displayDamage);
+    } else {
+        playClaimSound();
+        triggerHaptic();
+        flashClaimButton();
+    }
 
     return true;
+}
+
+// Critical claim feedback
+function playCriticalFeedback(damage) {
+    // Screen flash
+    const flash = document.createElement('div');
+    flash.className = 'critical-flash';
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 500);
+
+    // Damage number popup
+    const popup = document.createElement('div');
+    popup.className = 'critical-damage';
+    popup.innerHTML = `⚡ CRITICAL! -${damage} HP`;
+    document.body.appendChild(popup);
+    setTimeout(() => popup.remove(), 1500);
+
+    // Enhanced haptic
+    if ('vibrate' in navigator) {
+        navigator.vibrate([100, 50, 100, 50, 150]);
+    }
+
+    // Sound (using existing sound but could be different)
+    playClaimSound();
+
+    // Button glow effect
+    elements.claimBtn.classList.add('critical');
+    setTimeout(() => elements.claimBtn.classList.remove('critical'), 800);
 }
 
 function playClaimSound() {
