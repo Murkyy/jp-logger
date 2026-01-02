@@ -513,6 +513,20 @@ body.modal-open {
   font-weight: 600;
 }
 
+.forecast-display {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: var(--space-xs);
+  text-align: center;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.forecast-display.complete {
+  color: var(--accent-gold);
+  font-weight: 600;
+}
+
 /* ===== INPUT SECTION ===== */
 .input-section {
   width: 100%;

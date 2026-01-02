@@ -37,6 +37,7 @@ const elements = {
     totalHours: document.getElementById('totalHours'),
     mountainProgress: document.getElementById('mountainProgress'),
     rankDisplay: document.getElementById('rankDisplay'),
+    forecastDisplay: document.getElementById('forecastDisplay'),
     minutesInput: document.getElementById('minutesInput'),
     claimBtn: document.getElementById('claimBtn'),
     logList: document.getElementById('logList'),
@@ -144,6 +145,64 @@ function getPowerLevel() {
     return frontier; // Return the actual frontier value
 }
 
+// Calculate rolling average hours per day from log data (last N days)
+function calculateRollingAverage(days = 28) {
+    const dailyMinutes = {};
+    const today = new Date();
+
+    // Aggregate log entries by date
+    for (const entry of state.log) {
+        if (!entry.date) continue;
+        const date = entry.date.split('T')[0];
+        dailyMinutes[date] = (dailyMinutes[date] || 0) + entry.minutes;
+    }
+
+    // Sum minutes for the last N days
+    let totalMins = 0;
+    let daysWithData = 0;
+
+    for (let i = 0; i < days; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        if (dailyMinutes[dateStr]) {
+            totalMins += dailyMinutes[dateStr];
+            daysWithData++;
+        }
+    }
+
+    // Return average hours per day (use actual days elapsed, not just days with data)
+    return totalMins / 60 / days;
+}
+
+// Calculate projected completion date
+function getProjectedCompletion() {
+    const totalHours = state.totalMinutes / 60;
+    const totalGoal = state.settings.totalGoalHours;
+    const remainingHours = totalGoal - totalHours;
+
+    if (remainingHours <= 0) {
+        return { completed: true, date: null, pace: 0 };
+    }
+
+    const avgHoursPerDay = calculateRollingAverage(28);
+
+    if (avgHoursPerDay <= 0.01) {
+        return { completed: false, date: null, pace: 0, noData: true };
+    }
+
+    const daysRemaining = remainingHours / avgHoursPerDay;
+    const projectedDate = new Date();
+    projectedDate.setDate(projectedDate.getDate() + Math.ceil(daysRemaining));
+
+    return {
+        completed: false,
+        date: projectedDate,
+        pace: avgHoursPerDay,
+        daysRemaining: Math.ceil(daysRemaining)
+    };
+}
+
 function updateUI() {
     // Power Level (Mining Frontier)
     const frontier = getPowerLevel();
@@ -217,6 +276,27 @@ function updateUI() {
     const { rank, title, color } = getRank(totalHours);
     elements.rankDisplay.textContent = `Rank ${rank} • ${title}`;
     elements.rankDisplay.style.color = color;
+
+    // Fluency Forecast
+    if (elements.forecastDisplay) {
+        const forecast = getProjectedCompletion();
+        if (forecast.completed) {
+            elements.forecastDisplay.textContent = '🏆 Goal reached!';
+            elements.forecastDisplay.classList.add('complete');
+        } else if (forecast.noData) {
+            elements.forecastDisplay.textContent = '🎯 Log more to see forecast';
+        } else {
+            const dateStr = forecast.date.toLocaleDateString(undefined, {
+                month: 'short',
+                year: 'numeric'
+            });
+            const paceStr = forecast.pace.toFixed(1);
+            elements.forecastDisplay.textContent = `🎯 ${dateStr} @ ${paceStr}h/day`;
+
+            // Highlight if on track for 2-year goal (730 days from start)
+            // For now just show the date
+        }
+    }
 
     // Heatmap
     renderHeatmap();
