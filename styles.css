@@ -323,118 +323,125 @@ body.modal-open {
   color: var(--accent-cyan);
 }
 
-/* ===== RING SECTION ===== */
-.ring-section {
+/* ===== BOSS HP BAR SECTION ===== */
+.boss-section {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: var(--space-lg) var(--space-md);
+  backdrop-filter: blur(10px);
+}
+
+.boss-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  width: 100%;
+  margin-bottom: var(--space-sm);
 }
 
-.ring-container {
-  position: relative;
-  width: 240px;
-  height: 240px;
-}
-
-.progress-ring {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.ring-bg {
-  fill: none;
-  stroke: var(--ring-bg);
-  stroke-width: 12;
-}
-
-.ring-progress {
-  fill: none;
-  stroke: url(#ringGradient);
-  stroke-width: 12;
-  stroke-linecap: round;
-  stroke-dasharray: var(--ring-circumference);
-  stroke-dashoffset: var(--ring-circumference);
-  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
-}
-
-.ring-progress.complete {
-  stroke: url(#goldGradient);
-  filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.6));
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-.ring-progress.overcharge {
-  animation: pulse-glow 1s ease-in-out infinite, rainbow-glow 3s linear infinite;
-}
-
-@keyframes pulse-glow {
-
-  0%,
-  100% {
-    filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.6));
-  }
-
-  50% {
-    filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.9));
-  }
-}
-
-@keyframes rainbow-glow {
-  0% {
-    filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
-  }
-
-  33% {
-    filter: drop-shadow(0 0 25px rgba(245, 158, 11, 0.9));
-  }
-
-  66% {
-    filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
-  }
-
-  100% {
-    filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
-  }
-}
-
-.ring-inner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-}
-
-.week-hours {
-  font-size: 3rem;
+.boss-name {
+  font-size: 1.4rem;
   font-weight: 700;
-  line-height: 1;
-  background: linear-gradient(180deg, var(--text-primary) 0%, var(--text-secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-.week-hours.gold {
-  background: linear-gradient(135deg, var(--accent-gold), var(--accent-orange));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.boss-timer {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
-.week-label {
+.hp-container {
+  margin-bottom: var(--space-sm);
+}
+
+.hp-bar {
+  height: 28px;
+  background: var(--ring-bg);
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.hp-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+  border-radius: 14px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+.hp-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent);
+  border-radius: 14px 14px 0 0;
+}
+
+.hp-fill.defeated {
+  width: 0% !important;
+  background: linear-gradient(90deg, var(--accent-gold), var(--accent-orange));
+}
+
+.hp-text {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: var(--space-xs);
+}
+
+.week-hours-small {
+  text-align: center;
   font-size: 0.85rem;
   color: var(--text-muted);
   margin-top: var(--space-xs);
 }
 
-.week-status {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-top: var(--space-sm);
+/* Boss theme colors for HP bar */
+body.theme-void .boss-name {
+  color: var(--accent-purple);
+}
+
+body.theme-void .hp-fill {
+  background: linear-gradient(90deg, #8b5cf6, #a855f7);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+}
+
+body.theme-glitch .boss-name {
+  color: var(--accent-cyan);
+}
+
+body.theme-glitch .hp-fill {
+  background: linear-gradient(90deg, #06b6d4, #22d3ee);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+}
+
+body.theme-inferno .boss-name {
+  color: var(--accent-orange);
+}
+
+body.theme-inferno .hp-fill {
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+}
+
+body.theme-abyss .boss-name {
+  color: var(--accent-blue);
+}
+
+body.theme-abyss .hp-fill {
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
 }
 
 /* ===== MOUNTAIN SECTION ===== */
@@ -1414,38 +1421,8 @@ body.modal-open {
   color: var(--accent-green);
 }
 
-/* ===== BOSS THEMES ===== */
-body.theme-void .ring-progress {
-  filter: hue-rotate(90deg) drop-shadow(0 0 15px rgba(139, 92, 246, 0.6));
-}
 
-body.theme-void .week-status {
-  color: var(--accent-purple);
-}
-
-body.theme-glitch .ring-progress {
-  filter: hue-rotate(0deg) drop-shadow(0 0 15px rgba(6, 182, 212, 0.6));
-}
-
-body.theme-glitch .week-status {
-  color: var(--accent-cyan);
-}
-
-body.theme-inferno .ring-progress {
-  filter: hue-rotate(-60deg) drop-shadow(0 0 15px rgba(245, 158, 11, 0.6));
-}
-
-body.theme-inferno .week-status {
-  color: var(--accent-orange);
-}
-
-body.theme-abyss .ring-progress {
-  filter: hue-rotate(40deg) drop-shadow(0 0 15px rgba(59, 130, 246, 0.6));
-}
-
-body.theme-abyss .week-status {
-  color: var(--accent-blue);
-}
+/* (Boss themes for HP bar are defined above in Boss HP Bar Section) */
 
 /* ===== CRITICAL FEEDBACK ===== */
 .critical-flash {

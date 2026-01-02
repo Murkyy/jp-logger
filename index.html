@@ -32,36 +32,19 @@
       <button class="settings-btn" id="settingsBtn" aria-label="Settings">⚙</button>
     </header>
 
-    <!-- Weekly Ring -->
-    <section class="ring-section">
-      <div class="ring-container">
-        <svg class="progress-ring" viewBox="0 0 200 200">
-          <defs>
-            <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#3b82f6" />
-              <stop offset="100%" stop-color="#06b6d4" />
-            </linearGradient>
-            <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#fbbf24" />
-              <stop offset="100%" stop-color="#f59e0b" />
-            </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <circle class="ring-bg" cx="100" cy="100" r="85" />
-          <circle class="ring-progress" id="ringProgress" cx="100" cy="100" r="85" />
-        </svg>
-        <div class="ring-inner">
-          <div class="week-hours" id="weekHours">0h</div>
-          <div class="week-label" id="weekGoalLabel">/ 21h this week</div>
-        </div>
+    <!-- Boss HP Bar -->
+    <section class="boss-section">
+      <div class="boss-header">
+        <span class="boss-name" id="bossName">THE VOID</span>
+        <span class="boss-timer" id="bossTimer">3d left</span>
       </div>
-      <div class="week-status" id="weekStatus">Week 52 • Resets Sunday</div>
+      <div class="hp-container">
+        <div class="hp-bar">
+          <div class="hp-fill" id="hpFill"></div>
+        </div>
+        <div class="hp-text" id="hpText">1260 / 1260 HP</div>
+      </div>
+      <div class="week-hours-small" id="weekHours">0h logged</div>
     </section>
 
     <!-- Activity Heatmap (12 weeks) -->

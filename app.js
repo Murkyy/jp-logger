@@ -46,10 +46,12 @@ let state = {
 const elements = {
     powerLevel: document.getElementById('powerLevel'),
     streakCount: document.getElementById('streakCount'),
-    ringProgress: document.getElementById('ringProgress'),
+    // Boss HP bar elements
+    bossName: document.getElementById('bossName'),
+    bossTimer: document.getElementById('bossTimer'),
+    hpFill: document.getElementById('hpFill'),
+    hpText: document.getElementById('hpText'),
     weekHours: document.getElementById('weekHours'),
-    weekStatus: document.getElementById('weekStatus'),
-    weekGoalLabel: document.getElementById('weekGoalLabel'),
     totalHours: document.getElementById('totalHours'),
     mountainProgress: document.getElementById('mountainProgress'),
     rankDisplay: document.getElementById('rankDisplay'),
@@ -238,34 +240,14 @@ function updateUI() {
         elements.mangaCount.textContent = state.mangaChapters || 0;
     }
 
-    // Weekly Ring
+    // Weekly progress
     const weekHours = state.weekMinutes / 60;
     const weekGoal = state.settings.weeklyGoalHours;
-    const weekProgress = Math.min(weekHours / weekGoal, 1);
-    const offset = RING_CIRCUMFERENCE * (1 - weekProgress);
-
-    elements.ringProgress.style.strokeDashoffset = offset;
-    elements.weekHours.textContent = `${minutesToHours(state.weekMinutes)}h`;
-
-    // Update the week goal label dynamically
-    if (elements.weekGoalLabel) {
-        elements.weekGoalLabel.textContent = `/ ${weekGoal}h this week`;
-    }
-
-    // Ring completion states
     const isComplete = weekHours >= weekGoal;
-    const isOvercharge = weekHours > weekGoal * 1.2;
 
-    elements.ringProgress.classList.toggle('complete', isComplete);
-    elements.ringProgress.classList.toggle('overcharge', isOvercharge);
-    elements.weekHours.classList.toggle('gold', isComplete);
-
-    // Week status (resets Monday 00:00)
-    const weekNum = getWeekNumber(new Date());
+    // Week timing
     const now = new Date();
     const today = now.getDay();
-
-    // Calculate hours until next Monday 00:00
     const daysUntilMonday = today === 0 ? 1 : (8 - today) % 7;
     const nextMonday = new Date(now);
     nextMonday.setDate(now.getDate() + daysUntilMonday);
@@ -274,21 +256,37 @@ function updateUI() {
 
     // Boss system
     const boss = getCurrentBoss();
-    const bossHP = Math.max(0, Math.round((weekGoal - weekHours) * 60)); // HP = remaining minutes
+    const maxHP = Math.round(weekGoal * 60); // Max HP = goal in minutes
+    const currentHP = Math.max(0, Math.round((weekGoal - weekHours) * 60)); // Remaining HP
+    const hpPercent = (currentHP / maxHP) * 100;
 
     // Apply boss theme to document
     BOSS_THEMES.forEach(t => document.body.classList.remove(t.class));
     document.body.classList.add(boss.class);
 
-    let statusText;
-    if (isComplete) {
-        statusText = `⚔️ ${boss.name} DEFEATED!`;
-    } else if (hoursLeft <= 24) {
-        statusText = `⚔️ ${boss.name} • ${bossHP} HP • ${hoursLeft}h left`;
-    } else {
-        statusText = `⚔️ ${boss.name} • ${bossHP} HP • ${daysUntilMonday}d left`;
+    // Update HP bar elements
+    if (elements.bossName) {
+        elements.bossName.textContent = isComplete ? `${boss.name} DEFEATED` : boss.name;
     }
-    elements.weekStatus.textContent = statusText;
+    if (elements.bossTimer) {
+        if (isComplete) {
+            elements.bossTimer.textContent = 'Victory!';
+        } else if (hoursLeft <= 24) {
+            elements.bossTimer.textContent = `${hoursLeft}h left`;
+        } else {
+            elements.bossTimer.textContent = `${daysUntilMonday}d left`;
+        }
+    }
+    if (elements.hpFill) {
+        elements.hpFill.style.width = `${hpPercent}%`;
+        elements.hpFill.classList.toggle('defeated', isComplete);
+    }
+    if (elements.hpText) {
+        elements.hpText.textContent = `${currentHP} / ${maxHP} HP`;
+    }
+    if (elements.weekHours) {
+        elements.weekHours.textContent = `${minutesToHours(state.weekMinutes)}h logged`;
+    }
 
     // Mountain
     const totalHours = state.totalMinutes / 60;
@@ -307,17 +305,17 @@ function updateUI() {
     if (elements.forecastDisplay) {
         const forecast = getProjectedCompletion();
         if (forecast.completed) {
-            elements.forecastDisplay.textContent = '🏆 Goal reached!';
+            elements.forecastDisplay.textContent = 'Goal reached!';
             elements.forecastDisplay.classList.add('complete');
         } else if (forecast.noData) {
-            elements.forecastDisplay.textContent = '🎯 Log more to see forecast';
+            elements.forecastDisplay.textContent = 'Log more to see forecast';
         } else {
             const dateStr = forecast.date.toLocaleDateString(undefined, {
                 month: 'short',
                 year: 'numeric'
             });
             const paceStr = forecast.pace.toFixed(1);
-            elements.forecastDisplay.textContent = `🎯 ${dateStr} @ ${paceStr}h/day`;
+            elements.forecastDisplay.textContent = `${dateStr} @ ${paceStr}h/day`;
 
             // Highlight if on track for 2-year goal (730 days from start)
             // For now just show the date
