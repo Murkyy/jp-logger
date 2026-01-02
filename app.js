@@ -33,6 +33,7 @@ const elements = {
     ringProgress: document.getElementById('ringProgress'),
     weekHours: document.getElementById('weekHours'),
     weekStatus: document.getElementById('weekStatus'),
+    weekGoalLabel: document.getElementById('weekGoalLabel'),
     totalHours: document.getElementById('totalHours'),
     mountainProgress: document.getElementById('mountainProgress'),
     rankDisplay: document.getElementById('rankDisplay'),
@@ -170,6 +171,11 @@ function updateUI() {
 
     elements.ringProgress.style.strokeDashoffset = offset;
     elements.weekHours.textContent = `${minutesToHours(state.weekMinutes)}h`;
+
+    // Update the week goal label dynamically
+    if (elements.weekGoalLabel) {
+        elements.weekGoalLabel.textContent = `/ ${weekGoal}h this week`;
+    }
 
     // Ring completion states
     const isComplete = weekHours >= weekGoal;
