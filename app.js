@@ -20,6 +20,37 @@ function getCurrentBoss() {
 // Critical claim chance (15%)
 const CRITICAL_CHANCE = 0.15;
 
+// ===== ACHIEVEMENTS SYSTEM =====
+const ACHIEVEMENTS = {
+    // Hour milestones
+    first_steps: { id: 'first_steps', icon: 'I', name: 'First Steps', desc: 'Log your first hour', condition: (s) => s.totalMinutes >= 60 },
+    seedling: { id: 'seedling', icon: 'II', name: 'Seedling', desc: 'Reach 10 hours', condition: (s) => s.totalMinutes >= 600 },
+    growing: { id: 'growing', icon: 'III', name: 'Growing', desc: 'Reach 50 hours', condition: (s) => s.totalMinutes >= 3000 },
+    rooted: { id: 'rooted', icon: 'IV', name: 'Rooted', desc: 'Reach 100 hours', condition: (s) => s.totalMinutes >= 6000 },
+    climber: { id: 'climber', icon: 'V', name: 'Climber', desc: 'Reach 250 hours', condition: (s) => s.totalMinutes >= 15000 },
+    mountaineer: { id: 'mountaineer', icon: 'VI', name: 'Mountaineer', desc: 'Reach 500 hours', condition: (s) => s.totalMinutes >= 30000 },
+    summit: { id: 'summit', icon: 'VII', name: 'Summit', desc: 'Reach 1000 hours', condition: (s) => s.totalMinutes >= 60000 },
+    legend: { id: 'legend', icon: 'VIII', name: 'Legend', desc: 'Reach 2000 hours', condition: (s) => s.totalMinutes >= 120000 },
+    dragon: { id: 'dragon', icon: 'IX', name: 'Dragon', desc: 'Reach 3000 hours', condition: (s) => s.totalMinutes >= 180000 },
+
+    // Streak achievements
+    spark: { id: 'spark', icon: 'S1', name: 'Spark', desc: '3 day streak', condition: (s) => s.maxStreak >= 3 },
+    flame: { id: 'flame', icon: 'S2', name: 'Flame', desc: '7 day streak', condition: (s) => s.maxStreak >= 7 },
+    blaze: { id: 'blaze', icon: 'S3', name: 'Blaze', desc: '14 day streak', condition: (s) => s.maxStreak >= 14 },
+    inferno: { id: 'inferno', icon: 'S4', name: 'Inferno', desc: '30 day streak', condition: (s) => s.maxStreak >= 30 },
+    eternal: { id: 'eternal', icon: 'S5', name: 'Eternal Flame', desc: '100 day streak', condition: (s) => s.maxStreak >= 100 },
+
+    // Special achievements
+    night_owl: { id: 'night_owl', icon: 'N', name: 'Night Owl', desc: 'Claim after midnight', condition: null },
+    early_bird: { id: 'early_bird', icon: 'E', name: 'Early Bird', desc: 'Claim before 6am', condition: null },
+    crit_master: { id: 'crit_master', icon: 'C', name: 'Critical Master', desc: 'Get 10 critical hits', condition: (s) => s.critCount >= 10 },
+    manga_fan: { id: 'manga_fan', icon: 'M', name: 'Manga Fan', desc: 'Read 50 chapters', condition: (s) => s.mangaChapters >= 50 },
+    weekly_warrior: { id: 'weekly_warrior', icon: 'W1', name: 'Weekly Warrior', desc: 'Defeat 4 weekly bosses', condition: (s) => s.bossesDefeated >= 4 },
+    boss_slayer: { id: 'boss_slayer', icon: 'W2', name: 'Boss Slayer', desc: 'Defeat 12 weekly bosses', condition: (s) => s.bossesDefeated >= 12 },
+    dedicated: { id: 'dedicated', icon: 'D', name: 'Dedicated', desc: 'Log 4+ hours in one day', condition: null },
+    marathon: { id: 'marathon', icon: 'X', name: 'Marathon', desc: 'Log 8+ hours in one day', condition: null },
+};
+
 const defaultSettings = {
     weeklyGoalHours: 21,
     totalGoalHours: 3000,
@@ -38,7 +69,11 @@ let state = {
     log: [],
     lastClaim: null,
     streak: 0,
+    maxStreak: 0,
     lastClaimDate: null,
+    critCount: 0,
+    bossesDefeated: 0,
+    achievements: [], // Array of unlocked achievement IDs
     settings: { ...defaultSettings }
 };
 
@@ -325,6 +360,9 @@ function updateUI() {
     // Heatmap
     renderHeatmap();
 
+    // Achievements
+    renderAchievements();
+
     // Log
     renderLog();
 }
@@ -421,6 +459,123 @@ function deleteLogEntry(idx) {
     updateUI();
 }
 
+// ===== ACHIEVEMENT LOGIC =====
+function unlockAchievement(achievementId) {
+    if (!state.achievements) state.achievements = [];
+    if (state.achievements.includes(achievementId)) return false;
+
+    state.achievements.push(achievementId);
+    saveState();
+
+    const achievement = ACHIEVEMENTS[achievementId];
+    if (achievement) {
+        showAchievementPopup(achievement);
+    }
+    renderAchievements();
+    return true;
+}
+
+function showAchievementPopup(achievement) {
+    const popup = document.createElement('div');
+    popup.className = 'achievement-popup';
+    popup.innerHTML = `
+        <div class="achievement-popup-icon">${achievement.icon}</div>
+        <div class="achievement-popup-content">
+            <div class="achievement-popup-title">Achievement Unlocked!</div>
+            <div class="achievement-popup-name">${achievement.name}</div>
+            <div class="achievement-popup-desc">${achievement.desc}</div>
+        </div>
+    `;
+    document.body.appendChild(popup);
+
+    // Trigger animation
+    requestAnimationFrame(() => popup.classList.add('show'));
+
+    // Remove after animation
+    setTimeout(() => {
+        popup.classList.remove('show');
+        setTimeout(() => popup.remove(), 300);
+    }, 3000);
+
+    // Play sound if available
+    playClaimSound();
+}
+
+function checkAchievements(context = {}) {
+    if (!state.achievements) state.achievements = [];
+
+    // Update maxStreak
+    if (state.streak > (state.maxStreak || 0)) {
+        state.maxStreak = state.streak;
+    }
+
+    // Check all condition-based achievements
+    for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
+        if (state.achievements.includes(id)) continue;
+        if (achievement.condition && achievement.condition(state)) {
+            unlockAchievement(id);
+        }
+    }
+
+    // Check time-based achievements (manual)
+    if (context.claimTime) {
+        const hour = context.claimTime.getHours();
+        if (hour >= 0 && hour < 6) {
+            if (hour >= 0 && hour < 5) {
+                unlockAchievement('night_owl');
+            }
+            if (hour >= 4 && hour < 6) {
+                unlockAchievement('early_bird');
+            }
+        }
+    }
+
+    // Check daily total for dedicated/marathon
+    if (context.dailyTotal) {
+        if (context.dailyTotal >= 240) { // 4 hours
+            unlockAchievement('dedicated');
+        }
+        if (context.dailyTotal >= 480) { // 8 hours
+            unlockAchievement('marathon');
+        }
+    }
+}
+
+function getDailyTotal(dateStr) {
+    let total = 0;
+    for (const entry of state.log) {
+        if (entry.date && entry.date.split('T')[0] === dateStr) {
+            total += entry.minutes;
+        }
+    }
+    return total;
+}
+
+function renderAchievements() {
+    const container = document.getElementById('achievementsGrid');
+    if (!container) return;
+
+    const unlockedCount = (state.achievements || []).length;
+    const totalCount = Object.keys(ACHIEVEMENTS).length;
+
+    // Update counter
+    const counter = document.getElementById('achievementsCount');
+    if (counter) {
+        counter.textContent = `${unlockedCount}/${totalCount}`;
+    }
+
+    // Render grid
+    container.innerHTML = Object.values(ACHIEVEMENTS).map(ach => {
+        const unlocked = (state.achievements || []).includes(ach.id);
+        return `
+            <div class="achievement-badge ${unlocked ? 'unlocked' : 'locked'}"
+                 title="${ach.name}: ${ach.desc}">
+                <span class="achievement-icon">${ach.icon}</span>
+            </div>
+        `;
+    }).join('');
+}
+
 // ===== CLAIM LOGIC =====
 function claimMinutes(minutes) {
     if (!minutes || minutes <= 0 || minutes > 999) return false;
@@ -472,6 +627,27 @@ function claimMinutes(minutes) {
 
     // Critical claim check (15% chance on claims >= 20 minutes)
     const isCritical = minutes >= 20 && Math.random() < CRITICAL_CHANCE;
+
+    // Track crit count for achievements
+    if (isCritical) {
+        state.critCount = (state.critCount || 0) + 1;
+        saveState();
+    }
+
+    // Check if boss was just defeated (weekly goal reached)
+    const weekGoalMinutes = state.settings.weeklyGoalHours * 60;
+    const wasDefeated = (state.weekMinutes - minutes) < weekGoalMinutes && state.weekMinutes >= weekGoalMinutes;
+    if (wasDefeated) {
+        state.bossesDefeated = (state.bossesDefeated || 0) + 1;
+        saveState();
+    }
+
+    // Check achievements
+    const dailyTotal = getDailyTotal(today);
+    checkAchievements({
+        claimTime: now,
+        dailyTotal: dailyTotal
+    });
 
     // Calculate display damage (visual only - actual minutes already saved accurately)
     const baseDamage = minutes;
