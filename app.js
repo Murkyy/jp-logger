@@ -73,6 +73,7 @@ let state = {
     lastClaimDate: null,
     critCount: 0,
     bossesDefeated: 0,
+    bossDefeatedThisWeek: false,
     achievements: [], // Array of unlocked achievement IDs
     settings: { ...defaultSettings }
 };
@@ -176,6 +177,7 @@ function loadState() {
         state.weekStart = currentWeekStart;
         state.weekMinutes = 0;
         state.log = []; // Clear log for new week
+        state.bossDefeatedThisWeek = false; // Reset for new week
         saveState();
     }
 }
@@ -451,6 +453,12 @@ function deleteLogEntry(idx) {
     if (idx < 0 || idx >= state.log.length) return;
 
     const entry = state.log[idx];
+
+    // Decrement critCount if this was a critical claim
+    if (entry.isCritical && state.critCount > 0) {
+        state.critCount--;
+    }
+
     state.weekMinutes = Math.max(0, state.weekMinutes - entry.minutes);
     state.totalMinutes = Math.max(0, state.totalMinutes - entry.minutes);
     state.log.splice(idx, 1);
@@ -611,7 +619,8 @@ function claimMinutes(minutes) {
     state.log.push({
         time: `${formatDate(now)} ${formatTime(now)}`,
         date: now.toISOString(),
-        minutes: minutes
+        minutes: minutes,
+        isCritical: isCritical
     });
 
     // Keep only last 50 log entries
@@ -637,8 +646,9 @@ function claimMinutes(minutes) {
     // Check if boss was just defeated (weekly goal reached)
     const weekGoalMinutes = state.settings.weeklyGoalHours * 60;
     const wasDefeated = (state.weekMinutes - minutes) < weekGoalMinutes && state.weekMinutes >= weekGoalMinutes;
-    if (wasDefeated) {
+    if (wasDefeated && !state.bossDefeatedThisWeek) {
         state.bossesDefeated = (state.bossesDefeated || 0) + 1;
+        state.bossDefeatedThisWeek = true;
         saveState();
     }
 
