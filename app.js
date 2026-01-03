@@ -613,6 +613,9 @@ function claimMinutes(minutes) {
     }
     state.lastClaimDate = today;
 
+    // Critical claim check (15% chance on claims >= 20 minutes)
+    const isCritical = minutes >= 20 && Math.random() < CRITICAL_CHANCE;
+
     // Update state
     state.weekMinutes += minutes;
     state.totalMinutes += minutes;
@@ -633,9 +636,6 @@ function claimMinutes(minutes) {
 
     // Auto-sync to cloud if configured
     autoSync();
-
-    // Critical claim check (15% chance on claims >= 20 minutes)
-    const isCritical = minutes >= 20 && Math.random() < CRITICAL_CHANCE;
 
     // Track crit count for achievements
     if (isCritical) {
