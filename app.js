@@ -459,7 +459,9 @@ function deleteLogEntry(idx) {
         state.critCount--;
     }
 
-    state.weekMinutes = Math.max(0, state.weekMinutes - entry.minutes);
+    // Subtract bonusDamage from weekMinutes (or minutes for old entries)
+    const weekDamage = entry.bonusDamage || entry.minutes;
+    state.weekMinutes = Math.max(0, state.weekMinutes - weekDamage);
     state.totalMinutes = Math.max(0, state.totalMinutes - entry.minutes);
     state.log.splice(idx, 1);
 
@@ -615,14 +617,18 @@ function claimMinutes(minutes) {
 
     // Critical claim check (15% chance on claims >= 20 minutes)
     const isCritical = minutes >= 20 && Math.random() < CRITICAL_CHANCE;
+    const critMultiplier = isCritical ? (1.5 + Math.random()) : 1; // 1.5x to 2.5x on crit
+    const bonusDamage = Math.round(minutes * critMultiplier);
 
     // Update state
-    state.weekMinutes += minutes;
+    // weekMinutes gets bonus damage (for boss HP), totalMinutes stays accurate
+    state.weekMinutes += bonusDamage;
     state.totalMinutes += minutes;
     state.log.push({
         time: `${formatDate(now)} ${formatTime(now)}`,
         date: now.toISOString(),
         minutes: minutes,
+        bonusDamage: bonusDamage,
         isCritical: isCritical
     });
 
@@ -645,7 +651,7 @@ function claimMinutes(minutes) {
 
     // Check if boss was just defeated (weekly goal reached)
     const weekGoalMinutes = state.settings.weeklyGoalHours * 60;
-    const wasDefeated = (state.weekMinutes - minutes) < weekGoalMinutes && state.weekMinutes >= weekGoalMinutes;
+    const wasDefeated = (state.weekMinutes - bonusDamage) < weekGoalMinutes && state.weekMinutes >= weekGoalMinutes;
     if (wasDefeated && !state.bossDefeatedThisWeek) {
         state.bossesDefeated = (state.bossesDefeated || 0) + 1;
         state.bossDefeatedThisWeek = true;
@@ -659,14 +665,9 @@ function claimMinutes(minutes) {
         dailyTotal: dailyTotal
     });
 
-    // Calculate display damage (visual only - actual minutes already saved accurately)
-    const baseDamage = minutes;
-    const bonusMultiplier = isCritical ? (1.5 + Math.random()) : 1; // 1.5x to 2.5x on crit
-    const displayDamage = Math.round(baseDamage * bonusMultiplier);
-
     // Feedback
     if (isCritical) {
-        playCriticalFeedback(displayDamage);
+        playCriticalFeedback(bonusDamage);
     } else {
         playClaimSound();
         triggerHaptic();
