@@ -75,6 +75,10 @@ let state = {
     bossesDefeated: 0,
     bossDefeatedThisWeek: false,
     achievements: [], // Array of unlocked achievement IDs
+    // Corruption system
+    todayMinutes: 0,
+    corruptionLevel: 100,
+    lastLogicalDate: null,
     settings: { ...defaultSettings }
 };
 
@@ -126,6 +130,17 @@ const elements = {
 };
 
 // ===== UTILITIES =====
+
+// Get logical date (4 AM boundary - before 4am counts as previous day)
+function getLogicalDate(date = new Date()) {
+    const d = new Date(date);
+    if (d.getHours() < 4) {
+        d.setDate(d.getDate() - 1); // Before 4am = still "yesterday"
+    }
+    d.setHours(4, 0, 0, 0);
+    return d.toISOString().split('T')[0];
+}
+
 function getWeekNumber(date) {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     const dayNum = d.getUTCDay() || 7;
@@ -136,10 +151,14 @@ function getWeekNumber(date) {
 
 function getWeekStart(date) {
     const d = new Date(date);
+    // Adjust for 4am boundary
+    if (d.getHours() < 4) {
+        d.setDate(d.getDate() - 1);
+    }
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday as start
     d.setDate(diff);
-    d.setHours(0, 0, 0, 0);
+    d.setHours(4, 0, 0, 0); // Week starts Monday 4am
     return d.toISOString().split('T')[0];
 }
 
@@ -153,6 +172,32 @@ function formatDate(date) {
 
 function minutesToHours(mins) {
     return (mins / 60).toFixed(1);
+}
+
+// Get daily target based on weekday/weekend (9-unit split)
+// Weekday = 1 unit, Weekend = 2 units (total = 5*1 + 2*2 = 9)
+function getDailyTarget(dateStr = null) {
+    const weeklyGoal = (state.settings.weeklyGoalHours || 21) * 60; // in minutes
+
+    let dayOfWeek;
+    if (dateStr) {
+        const date = new Date(dateStr + 'T12:00:00'); // Noon to avoid timezone issues
+        dayOfWeek = date.getDay();
+    } else {
+        // Use current logical date
+        const now = new Date();
+        const logicalDate = new Date(now);
+        if (logicalDate.getHours() < 4) {
+            logicalDate.setDate(logicalDate.getDate() - 1);
+        }
+        dayOfWeek = logicalDate.getDay();
+    }
+
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    // Total units: 5 weekdays × 1 + 2 weekend days × 2 = 9
+    const unitValue = weeklyGoal / 9;
+    return isWeekend ? unitValue * 2 : unitValue;
 }
 
 // ===== PERSISTENCE =====
@@ -369,7 +414,99 @@ function updateUI() {
     renderLog();
 }
 
+// ===== CORRUPTION SYSTEM =====
+
+// Recalculate today's minutes from log entries
+function recalculateTodayMinutes(logicalDate) {
+    return state.log
+        .filter(entry => {
+            if (!entry.date) return false;
+            return getLogicalDate(new Date(entry.date)) === logicalDate;
+        })
+        .reduce((sum, entry) => sum + entry.minutes, 0);
+}
+
+// Update corruption level based on today's progress
+function updateCorruption() {
+    const today = getLogicalDate();
+
+    // Reset on new logical day (4am boundary)
+    if (state.lastLogicalDate !== today) {
+        state.todayMinutes = recalculateTodayMinutes(today);
+        state.lastLogicalDate = today;
+    }
+
+    const target = getDailyTarget();
+    const progress = state.todayMinutes / target;
+
+    if (progress >= 1) {
+        // Overdrive! Exceeded daily goal
+        // Goes from 0 to -50 as you exceed by up to 100%
+        state.corruptionLevel = -Math.min(50, (progress - 1) * 50);
+    } else {
+        state.corruptionLevel = Math.max(0, 100 - (progress * 100));
+    }
+
+    applyCorruptionVisuals(state.corruptionLevel);
+    saveState();
+}
+
+// Apply visual corruption effects
+function applyCorruptionVisuals(level) {
+    document.body.style.setProperty('--corruption', Math.max(0, level));
+
+    // Remove all corruption/overdrive classes
+    document.body.classList.remove(
+        'corruption-0', 'corruption-25', 'corruption-50',
+        'corruption-75', 'corruption-100', 'overdrive'
+    );
+
+    if (level < 0) {
+        // Overdrive mode!
+        document.body.classList.add('overdrive');
+    } else if (level === 0) {
+        document.body.classList.add('corruption-0');
+    } else if (level <= 25) {
+        document.body.classList.add('corruption-25');
+    } else if (level <= 50) {
+        document.body.classList.add('corruption-50');
+    } else if (level <= 75) {
+        document.body.classList.add('corruption-75');
+    } else {
+        document.body.classList.add('corruption-100');
+    }
+}
+
+// Trigger purification shockwave animation
+function triggerPurification(button) {
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const wave = document.createElement('div');
+    wave.className = 'purify-shockwave';
+    wave.style.left = rect.left + rect.width / 2 + 'px';
+    wave.style.top = rect.top + rect.height / 2 + 'px';
+    document.body.appendChild(wave);
+
+    setTimeout(() => wave.remove(), 500);
+}
+
 // ===== HEATMAP =====
+
+// Get heatmap level based on percentage of daily target (retroactive weekday/weekend aware)
+function getHeatmapLevel(mins, dateStr) {
+    if (mins === 0) return 0;
+
+    const dailyTarget = getDailyTarget(dateStr);
+    const ratio = mins / dailyTarget;
+
+    if (ratio >= 1.5) return 5;  // 150%+ = gold (overdrive)
+    if (ratio >= 1.0) return 4;  // 100%+ = full target
+    if (ratio >= 0.75) return 3; // 75%+
+    if (ratio >= 0.5) return 2;  // 50%+
+    return 1;                    // Any activity
+}
+
 function renderHeatmap() {
     const container = document.getElementById('heatmapContainer');
     if (!container) return;
@@ -393,13 +530,8 @@ function renderHeatmap() {
             const dateStr = d.toISOString().split('T')[0];
             const mins = dailyMinutes[dateStr] || 0;
 
-            // Calculate color level (0-5)
-            let level = 0;
-            if (mins > 0) level = 1;       // > 0 mins
-            if (mins >= 30) level = 2;     // >= 30 mins
-            if (mins >= 60) level = 3;     // >= 1 hour
-            if (mins >= 120) level = 4;    // >= 2 hours
-            if (mins >= 240) level = 5;    // >= 4 hours (golden)
+            // Calculate color level dynamically based on daily target
+            const level = getHeatmapLevel(mins, dateStr);
 
             cells.push({ date: dateStr, mins, level });
         }
@@ -408,10 +540,14 @@ function renderHeatmap() {
         container.innerHTML = cells.map(c => {
             const hours = Math.floor(c.mins / 60);
             const minutes = c.mins % 60;
+            const target = getDailyTarget(c.date);
+            const targetHours = Math.floor(target / 60);
+            const targetMins = Math.round(target % 60);
+            const targetStr = targetHours > 0 ? `${targetHours}h${targetMins}m` : `${targetMins}m`;
             const timeStr = c.mins === 0 ? 'No activity' :
                 (hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`);
-            return `<div class="heatmap-cell" data-level="${c.level}" 
-                title="${c.date}: ${timeStr}"></div>`;
+            return `<div class="heatmap-cell" data-level="${c.level}"
+                title="${c.date}: ${timeStr} / ${targetStr} target"></div>`;
         }).join('');
     } catch (e) {
         console.error('Heatmap render error:', e);
@@ -632,6 +768,12 @@ function claimMinutes(minutes) {
         isCritical: isCritical
     });
 
+    // Update corruption system
+    const oldCorruption = state.corruptionLevel;
+    state.todayMinutes += minutes;
+    updateCorruption();
+    const purified = state.corruptionLevel < oldCorruption;
+
     // Keep entries for 12 weeks of heatmap/forecast history
     if (state.log.length > 500) {
         state.log = state.log.slice(-500);
@@ -672,6 +814,11 @@ function claimMinutes(minutes) {
         playClaimSound();
         triggerHaptic();
         flashClaimButton();
+    }
+
+    // Purification effect if corruption decreased
+    if (purified) {
+        triggerPurification(elements.claimBtn);
     }
 
     return true;
@@ -1391,6 +1538,7 @@ loadState();
 loadFreqMap(); // Load frequency map for mining frontier
 updatePresetButtons();
 updateUI();
+updateCorruption(); // Initialize corruption visuals
 initAutoSync(); // Start real-time sync if user ID exists
 
 // Focus input on load (desktop)
