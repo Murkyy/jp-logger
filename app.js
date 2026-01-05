@@ -205,6 +205,29 @@ function saveState() {
     localStorage.setItem('roninLogger', JSON.stringify(state));
 }
 
+// Merge logs: combine local and remote, deduplicate by date+minutes
+function mergeLogs(localLog, remoteLog) {
+    if (!remoteLog || !Array.isArray(remoteLog)) return localLog || [];
+    if (!localLog || !Array.isArray(localLog)) return remoteLog;
+
+    const seen = new Set();
+    const merged = [];
+
+    // Combine both logs, local first (priority)
+    for (const entry of [...localLog, ...remoteLog]) {
+        if (!entry.date) continue;
+        const key = `${entry.date}-${entry.minutes}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            merged.push(entry);
+        }
+    }
+
+    // Sort by date
+    merged.sort((a, b) => new Date(a.date) - new Date(b.date));
+    return merged;
+}
+
 function loadState() {
     const saved = localStorage.getItem('roninLogger');
     if (saved) {
@@ -1320,10 +1343,12 @@ function setupRealtimeSync(userId) {
     realtimeUnsubscribe = userRef.on('value', (snapshot) => {
         const data = snapshot.val();
         if (data && data.lastClaimDate !== state.lastClaimDate) {
-            // Only update if data is different (avoid infinite loop)
+            // Merge logs instead of overwriting
+            const mergedLog = mergeLogs(state.log, data.log);
             state = {
                 ...state,
                 ...data,
+                log: mergedLog,
                 settings: { ...defaultSettings, ...data.settings }
             };
             saveState();
@@ -1391,9 +1416,12 @@ async function cloudPull() {
         const data = snapshot.val();
 
         if (data) {
+            // Merge logs instead of overwriting
+            const mergedLog = mergeLogs(state.log, data.log);
             state = {
                 ...state,
                 ...data,
+                log: mergedLog,
                 settings: { ...defaultSettings, ...data.settings }
             };
             saveState();
