@@ -1340,22 +1340,50 @@ function setupRealtimeSync(userId) {
     }
 
     const userRef = db.ref(`users/${userId}`);
-    realtimeUnsubscribe = userRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data && data.lastClaimDate !== state.lastClaimDate) {
-            // Merge logs instead of overwriting
-            const mergedLog = mergeLogs(state.log, data.log);
-            state = {
-                ...state,
-                ...data,
-                log: mergedLog,
-                settings: { ...defaultSettings, ...data.settings }
-            };
-            saveState();
-            updatePresetButtons();
-            updateUI();
-            console.log('Real-time sync: data updated from cloud');
+
+    // First, push our current local state to ensure it's in Firebase
+    // This prevents remote empty data from wiping local logs
+    userRef.once('value').then((snapshot) => {
+        const remoteData = snapshot.val();
+        const localHasMoreLogs = (state.log?.length || 0) > (remoteData?.log?.length || 0);
+        const localTotalHigher = (state.totalMinutes || 0) > (remoteData?.totalMinutes || 0);
+
+        // If local has more data, push it first
+        if (localHasMoreLogs || localTotalHigher) {
+            console.log('Local data is richer, pushing to cloud first');
+            userRef.set(state);
         }
+
+        // Now set up the listener for future updates
+        realtimeUnsubscribe = userRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            // Only sync if remote has genuinely new claims (different lastClaimDate)
+            // AND remote actually has data we don't have
+            if (data.lastClaimDate && data.lastClaimDate !== state.lastClaimDate) {
+                // Merge logs - local logs take priority for duplicates
+                const mergedLog = mergeLogs(state.log, data.log);
+
+                // Only update if merge actually adds something
+                if (mergedLog.length >= state.log.length) {
+                    state = {
+                        ...state,
+                        ...data,
+                        log: mergedLog,
+                        // Keep whichever totals are higher
+                        totalMinutes: Math.max(state.totalMinutes || 0, data.totalMinutes || 0),
+                        weekMinutes: Math.max(state.weekMinutes || 0, data.weekMinutes || 0),
+                        todayMinutes: Math.max(state.todayMinutes || 0, data.todayMinutes || 0),
+                        settings: { ...defaultSettings, ...data.settings }
+                    };
+                    saveState();
+                    updatePresetButtons();
+                    updateUI();
+                    console.log('Real-time sync: merged data from cloud');
+                }
+            }
+        });
     });
 }
 
