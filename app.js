@@ -176,7 +176,7 @@ function loadState() {
     if (state.weekStart !== currentWeekStart) {
         state.weekStart = currentWeekStart;
         state.weekMinutes = 0;
-        state.log = []; // Clear log for new week
+        // Keep state.log for heatmap and forecast history
         state.bossDefeatedThisWeek = false; // Reset for new week
         saveState();
     }
@@ -632,9 +632,9 @@ function claimMinutes(minutes) {
         isCritical: isCritical
     });
 
-    // Keep only last 50 log entries
-    if (state.log.length > 50) {
-        state.log = state.log.slice(-50);
+    // Keep entries for 12 weeks of heatmap/forecast history
+    if (state.log.length > 500) {
+        state.log = state.log.slice(-500);
     }
 
     saveState();
