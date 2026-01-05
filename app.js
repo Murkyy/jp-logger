@@ -285,7 +285,7 @@ function updateUI() {
     // Week timing
     const now = new Date();
     const today = now.getDay();
-    const daysUntilMonday = today === 0 ? 1 : (8 - today) % 7;
+    const daysUntilMonday = today === 0 ? 1 : (8 - today) % 7 || 7;
     const nextMonday = new Date(now);
     nextMonday.setDate(now.getDate() + daysUntilMonday);
     nextMonday.setHours(0, 0, 0, 0);
