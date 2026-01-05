@@ -603,6 +603,7 @@ function deleteLogEntry(idx) {
 
     saveState();
     updateUI();
+    updateCorruption(); // Recalculate todayMinutes from log
 }
 
 // ===== ACHIEVEMENT LOGIC =====
